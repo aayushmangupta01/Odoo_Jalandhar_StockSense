@@ -75,7 +75,7 @@ export function Sidebar() {
                       className={({ isActive }) =>
                         `flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
                           isActive
-                            ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-md shadow-cyan-950/20'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
                             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                         }`
                       }
@@ -85,7 +85,7 @@ export function Sidebar() {
                         <span>{item.label}</span>
                       </div>
                       {item.badge && (
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
                           {item.badge}
                         </span>
                       )}
@@ -194,16 +194,16 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-slate-950 border-r border-slate-800/80 flex flex-col h-screen sticky top-0 z-30 select-none">
+    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0 z-30 select-none">
       {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-indigo-600 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-cyan-950/50">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-blue-700 flex items-center justify-center font-black text-white text-lg shadow-sm">
             S
           </div>
           <div>
-            <h1 className="font-extrabold text-sm text-slate-100 tracking-tight flex items-center gap-1">
-              StockSense <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/50">v2.0</span>
+            <h1 className="font-extrabold text-sm text-slate-900 tracking-tight flex items-center gap-1">
+              StockSense <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200">v2.0</span>
             </h1>
             <p className="text-[10px] text-slate-400">Intelligent Inventory System</p>
           </div>
@@ -220,7 +220,7 @@ export function Sidebar() {
             className={({ isActive }) =>
               `flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                 isActive
-                  ? 'bg-slate-800 text-slate-100 border border-slate-700'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`
             }
@@ -256,9 +256,9 @@ export function Sidebar() {
 
         {/* Teammate Module Note */}
         {isAdmin && (
-          <div className="mt-4 p-3 rounded-lg border border-slate-800/60 bg-slate-900/40 text-[11px] text-slate-400">
+          <div className="mt-4 p-3 rounded-lg border border-slate-200 bg-slate-50 text-[11px] text-slate-500">
             <div className="flex items-center gap-2 font-medium text-slate-300 mb-1">
-              <Warehouse className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <Warehouse className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <span>Warehouse Module</span>
             </div>
             <p className="text-[10px] text-slate-500 leading-normal">
@@ -269,7 +269,7 @@ export function Sidebar() {
       </div>
 
       {/* System Status Footer */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-950/80 text-[11px] text-slate-400 flex items-center justify-between">
+      <div className="p-3 border-t border-slate-200 bg-white text-[11px] text-slate-500 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="font-mono text-[10px]">INVENTORY ONLINE</span>

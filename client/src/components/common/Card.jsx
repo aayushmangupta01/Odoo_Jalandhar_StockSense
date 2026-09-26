@@ -2,9 +2,9 @@ import React from 'react';
 
 export function Card({ title, subtitle, action, children, className = '' }) {
   return (
-    <div className={`bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-xl backdrop-blur-md ${className}`}>
+    <div className={`bg-white border border-slate-200 rounded-xl p-5 shadow-sm ${className}`}>
       {(title || action) && (
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800/80">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
           <div>
             {title && <h3 className="text-base font-semibold text-slate-100">{title}</h3>}
             {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
@@ -19,7 +19,7 @@ export function Card({ title, subtitle, action, children, className = '' }) {
 
 export function StatCard({ title, value, subtext, icon: Icon, trend, color = 'cyan' }) {
   const colorStyles = {
-    cyan: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    cyan: 'bg-blue-50 text-blue-600 border-blue-100',
     amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
     rose: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
     emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -28,7 +28,7 @@ export function StatCard({ title, value, subtext, icon: Icon, trend, color = 'cy
   };
 
   return (
-    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 shadow-xl backdrop-blur-md flex items-start justify-between">
+    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-start justify-between">
       <div>
         <p className="text-xs font-medium uppercase tracking-wider text-slate-400">{title}</p>
         <h4 className="text-2xl font-bold text-slate-100 mt-1 font-mono">{value}</h4>

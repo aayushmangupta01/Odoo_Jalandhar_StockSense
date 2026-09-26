@@ -1,11 +1,94 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    color-scheme: light;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    color-scheme: dark;
+    color: #1e293b;
+    background: #f4f7fb;
   }
 }
+
+/* Shared light palette for screens that still use the original dark utilities. */
+[class~="bg-slate-950"] { background-color: #f4f7fb; }
+[class~="bg-slate-950/80"] { background-color: rgb(255 255 255 / 92%); }
+[class~="bg-slate-950/70"] { background-color: rgb(255 255 255 / 88%); }
+[class~="bg-slate-950/60"] { background-color: rgb(255 255 255 / 84%); }
+[class~="bg-slate-950/50"] { background-color: rgb(255 255 255 / 80%); }
+[class~="bg-slate-950/40"] { background-color: rgb(255 255 255 / 76%); }
+[class~="bg-slate-900"] { background-color: #fff; }
+[class~="bg-slate-900/95"] { background-color: rgb(255 255 255 / 98%); }
+[class~="bg-slate-900/90"] { background-color: rgb(255 255 255 / 96%); }
+[class~="bg-slate-900/80"] { background-color: rgb(255 255 255 / 94%); }
+[class~="bg-slate-900/60"] { background-color: #f8fafc; }
+[class~="bg-slate-900/40"] { background-color: #f8fafc; }
+[class~="bg-slate-800"] { background-color: #f1f5f9; }
+[class~="bg-slate-800/60"] { background-color: #f1f5f9; }
+[class~="bg-slate-800/50"] { background-color: #f1f5f9; }
+[class~="bg-slate-800/40"] { background-color: #f8fafc; }
+[class~="bg-slate-700"] { background-color: #e2e8f0; }
+[class~="bg-cyan-950"] { background-color: #eff6ff; }
+[class~="bg-cyan-950/40"] { background-color: #f8fafc; }
+[class~="bg-cyan-950/30"] { background-color: #f8fafc; }
+[class~="bg-cyan-50"] { background-color: #eff6ff; }
+[class~="bg-cyan-600"] { background-color: #2563eb; }
+[class~="bg-cyan-600/20"] { background-color: rgb(37 99 235 / 10%); }
+[class~="bg-cyan-500"] { background-color: #3b82f6; }
+[class~="bg-cyan-500/15"] { background-color: #eff6ff; }
+[class~="bg-cyan-500/10"] { background-color: #eff6ff; }
+[class~="border-slate-800"] { border-color: #e2e8f0; }
+[class~="border-slate-800/80"] { border-color: #e2e8f0; }
+[class~="border-slate-800/60"] { border-color: #e2e8f0; }
+[class~="border-slate-700"] { border-color: #cbd5e1; }
+[class~="border-slate-700/80"] { border-color: #cbd5e1; }
+[class~="border-slate-500/20"] { border-color: #e2e8f0; }
+[class~="border-cyan-800"] { border-color: #bfdbfe; }
+[class~="border-cyan-400"] { border-color: #93c5fd; }
+[class~="border-cyan-800/50"] { border-color: #bfdbfe; }
+[class~="border-cyan-800/40"] { border-color: #bfdbfe; }
+[class~="border-cyan-500/30"] { border-color: #bfdbfe; }
+[class~="border-cyan-500/20"] { border-color: #dbeafe; }
+[class~="border-cyan-500/50"] { border-color: #93c5fd; }
+[class~="border-cyan-400/30"] { border-color: #93c5fd; }
+[class~="text-slate-100"] { color: #0f172a; }
+[class~="text-slate-200"] { color: #1e293b; }
+[class~="text-slate-300"] { color: #334155; }
+[class~="text-slate-400"] { color: #64748b; }
+[class~="text-slate-500"] { color: #64748b; }
+[class~="text-cyan-100"] { color: #1d4ed8; }
+[class~="text-cyan-200"] { color: #1d4ed8; }
+[class~="text-cyan-300"] { color: #2563eb; }
+[class~="text-cyan-400"] { color: #2563eb; }
+[class~="text-cyan-400/90"] { color: #2563eb; }
+[class~="text-cyan-600"] { color: #1d4ed8; }
+[class~="ring-slate-950"] { --tw-ring-offset-color: #fff; }
+[class~="divide-slate-800"] > :not(:last-child) { border-color: #e2e8f0; }
+[class~="divide-slate-800/60"] > :not(:last-child) { border-color: #e2e8f0; }
+[class~="hover:bg-slate-900"]:hover { background-color: #f1f5f9; }
+[class~="hover:bg-slate-800/60"]:hover,
+[class~="hover:bg-slate-800/50"]:hover { background-color: #f1f5f9; }
+[class~="hover:bg-slate-800/40"]:hover { background-color: #f8fafc; }
+[class~="hover:bg-slate-800"]:hover { background-color: #e2e8f0; }
+[class~="hover:bg-cyan-950/40"]:hover { background-color: #eff6ff; }
+[class~="hover:text-slate-100"]:hover { color: #0f172a; }
+[class~="hover:text-slate-200"]:hover { color: #1e293b; }
+[class~="hover:text-cyan-300"]:hover,
+[class~="hover:text-cyan-400"]:hover { color: #1d4ed8; }
+[class~="hover:bg-cyan-500"]:hover { background-color: #1d4ed8; }
+[class~="hover:border-cyan-500/50"]:hover { border-color: #93c5fd; }
+[class~="hover:border-cyan-400"]:hover,
+[class~="hover:border-cyan-800"]:hover { border-color: #93c5fd; }
+[class~="focus:border-cyan-500"]:focus { border-color: #3b82f6; }
+[class~="focus:ring-cyan-500"]:focus { --tw-ring-color: #3b82f6; }
+[class~="focus:ring-offset-slate-950"]:focus { --tw-ring-offset-color: #fff; }
+.modal-backdrop { background-color: rgb(15 23 42 / 48%); }
+[class~="shadow-xl"] { --tw-shadow: 0 1px 3px 0 rgb(15 23 42 / 8%), 0 1px 2px -1px rgb(15 23 42 / 8%); }
+[class~="shadow-lg"] { --tw-shadow: 0 1px 3px 0 rgb(15 23 42 / 8%); }
 
 /* Custom scrollbar for data density */
 ::-webkit-scrollbar {
@@ -13,12 +96,12 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #94a3b8;
 }
