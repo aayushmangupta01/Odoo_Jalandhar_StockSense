@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
@@ -23,60 +24,142 @@ import {
 } from 'lucide-react';
 
 export function Sidebar() {
-  const navSection = (title, items) => (
+  const { pathname } = useLocation();
+  const [expandedGroups, setExpandedGroups] = useState({});
+
+  const navSection = (title, groups) => (
     <div className="mb-5">
       <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">
         {title}
       </p>
-      <div className="space-y-0.5">
-        {items.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.exact}
-            className={({ isActive }) =>
-              `flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
-                isActive
-                  ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-md shadow-cyan-950/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`
-            }
-          >
-            <div className="flex items-center gap-2.5">
-              <item.icon className="w-4 h-4 shrink-0" />
-              <span>{item.label}</span>
+      <div className="space-y-1">
+        {groups.map((group) => {
+          const isActiveGroup = group.items.some(({ path }) =>
+            pathname === path || pathname.startsWith(`${path}/`)
+          );
+          const isExpanded = expandedGroups[group.id] ?? isActiveGroup;
+
+          return (
+            <div key={group.id}>
+              <button
+                type="button"
+                aria-expanded={isExpanded}
+                onClick={() => setExpandedGroups((current) => ({
+                  ...current,
+                  [group.id]: !isExpanded
+                }))}
+                className="flex w-full items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-slate-100 hover:bg-slate-800/50 transition-colors"
+              >
+                <span>{group.label}</span>
+                <ChevronRight
+                  className={`w-3.5 h-3.5 text-slate-500 transition-transform ${
+                    isExpanded ? 'rotate-90' : ''
+                  }`}
+                />
+              </button>
+              {isExpanded && (
+                <div className="ml-3 mt-0.5 space-y-0.5 border-l border-slate-800 pl-2">
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      end={item.exact}
+                      className={({ isActive }) =>
+                        `flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
+                          isActive
+                            ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-md shadow-cyan-950/20'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                        }`
+                      }
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <item.icon className="w-4 h-4 shrink-0" />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">
+                          {item.badge}
+                        </span>
+                      )}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
-            {item.badge && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">
-                {item.badge}
-              </span>
-            )}
-          </NavLink>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 
   const coreInventory = [
-    { path: '/inventory/products', label: 'Products', icon: Package },
-    { path: '/inventory/categories', label: 'Categories', icon: FolderTree },
-    { path: '/inventory/stock', label: 'Current Stock', icon: Boxes },
-    { path: '/inventory/receipts', label: 'Receipts', icon: ArrowDownLeft },
-    { path: '/inventory/deliveries', label: 'Delivery Orders', icon: ArrowUpRight },
-    { path: '/inventory/adjustments', label: 'Adjustments', icon: Sliders },
-    { path: '/inventory/physical-verification', label: 'Physical Count', icon: ClipboardCheck },
-    { path: '/inventory/opening-stock', label: 'Opening Stock', icon: PackagePlus },
-    { path: '/inventory/movements', label: 'Stock Movements', icon: History },
-    { path: '/inventory/ledger', label: 'Stock Ledger', icon: FileSpreadsheet },
-    { path: '/inventory/analytics', label: 'Inventory Analytics', icon: BarChart3 },
+    {
+      id: 'catalog',
+      label: 'Product Catalog',
+      items: [
+        { path: '/inventory/products', label: 'Products', icon: Package },
+        { path: '/inventory/categories', label: 'Categories', icon: FolderTree },
+      ]
+    },
+    {
+      id: 'stock',
+      label: 'Stock Management',
+      items: [
+        { path: '/inventory/stock', label: 'Current Stock', icon: Boxes },
+        { path: '/inventory/opening-stock', label: 'Opening Stock', icon: PackagePlus },
+        { path: '/inventory/physical-verification', label: 'Physical Count', icon: ClipboardCheck },
+      ]
+    },
+    {
+      id: 'operations',
+      label: 'Stock Operations',
+      items: [
+        { path: '/inventory/receipts', label: 'Receipts', icon: ArrowDownLeft },
+        { path: '/inventory/deliveries', label: 'Delivery Orders', icon: ArrowUpRight },
+        { path: '/inventory/adjustments', label: 'Adjustments', icon: Sliders },
+      ]
+    },
+    {
+      id: 'reports',
+      label: 'History & Reports',
+      items: [
+        { path: '/inventory/movements', label: 'Stock Movements', icon: History },
+        { path: '/inventory/ledger', label: 'Stock Ledger', icon: FileSpreadsheet },
+        { path: '/inventory/analytics', label: 'Inventory Analytics', icon: BarChart3 },
+      ]
+    },
   ];
 
   const intelligence = [
-    { path: '/inventory/intelligence/anomalies', label: 'Anomalies', icon: AlertTriangle, badge: 'AI' },
-    { path: '/inventory/intelligence/forecast', label: 'Stock Forecast', icon: TrendingDown, badge: 'Predict' },
-    { path: '/inventory/intelligence/location', label: 'Location Insights', icon: MapPin },
-    { path: '/inventory/intelligence/recommendations', label: 'Smart Transfer', icon: Sparkles },
-    { path: '/inventory/stock-detective', label: 'Stock Detective', icon: Bot, badge: 'NL Query' },
+    {
+      id: 'monitoring',
+      label: 'Monitoring',
+      items: [
+        { path: '/inventory/intelligence/anomalies', label: 'Anomalies', icon: AlertTriangle, badge: 'AI' },
+      ]
+    },
+    {
+      id: 'planning',
+      label: 'Planning & Optimization',
+      items: [
+        { path: '/inventory/intelligence/forecast', label: 'Stock Forecast', icon: TrendingDown, badge: 'Predict' },
+        { path: '/inventory/intelligence/recommendations', label: 'Smart Transfer', icon: Sparkles },
+      ]
+    },
+    {
+      id: 'warehouse-insights',
+      label: 'Warehouse Insights',
+      items: [
+        { path: '/inventory/intelligence/location', label: 'Location Insights', icon: MapPin },
+      ]
+    },
+    {
+      id: 'assistant',
+      label: 'Inventory Assistant',
+      items: [
+        { path: '/inventory/stock-detective', label: 'Stock Detective', icon: Bot, badge: 'NL Query' },
+      ]
+    },
   ];
 
   return (
