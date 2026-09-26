@@ -1,9 +1,11 @@
 const MOCK_OTP = '246810';
+const SESSION_KEY = 'stocksense.mock-auth-session';
 const accounts = new Map([
   ['demo@stocksense.app', { name: 'Inventory Manager', password: 'StockSense123!' }],
 ]);
 const resetChallenges = new Map();
 const verifiedResets = new Set();
+let activeSession = null;
 
 function simulateRequest(result) {
   return new Promise((resolve) => {
@@ -13,6 +15,29 @@ function simulateRequest(result) {
 
 function normalizeEmail(email) {
   return email.trim().toLowerCase();
+}
+
+function storeSession(user) {
+  activeSession = user;
+  try {
+    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+  } catch {
+    // Keep the mock session in memory when browser storage is unavailable.
+  }
+}
+
+function readSession() {
+  if (activeSession) return activeSession;
+
+  try {
+    const session = window.sessionStorage.getItem(SESSION_KEY);
+    if (!session) return null;
+
+    const user = JSON.parse(session);
+    return user && typeof user.email === 'string' ? user : null;
+  } catch {
+    return null;
+  }
 }
 
 export const authApi = {
@@ -25,7 +50,22 @@ export const authApi = {
       throw new Error('The email or password is incorrect. Please try again.');
     }
 
-    return { user: { email: normalizedEmail, name: account.name } };
+    const user = { email: normalizedEmail, name: account.name };
+    storeSession(user);
+    return { user };
+  },
+
+  getCurrentUser() {
+    return readSession();
+  },
+
+  logout() {
+    activeSession = null;
+    try {
+      window.sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      // The current in-memory session is already cleared.
+    }
   },
 
   async signup({ name, email, password }) {

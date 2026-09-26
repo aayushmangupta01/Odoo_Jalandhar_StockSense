@@ -1,7 +1,8 @@
 import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import Dashboard from "../pages/dashboard/dashboard";
 import InventoryLayout from "../components/layout/InventoryLayout";
+import { authApi } from "../services/authApi";
 
 import ProductsPage from "../pages/inventory/ProductsPage";
 import ProductDetailPage from "../pages/inventory/ProductDetailPage";
@@ -27,6 +28,28 @@ import ForgotPassword from "../pages/Login/ForgotPassword";
 import OTPVerification from "../pages/Login/OTPVerification";
 import ResetPassword from "../pages/Login/ResetPassword";
 
+function RootRoute() {
+  return <Navigate to={authApi.getCurrentUser() ? "/dashboard" : "/login"} replace />;
+}
+
+function RequireAuth({ children }) {
+  const location = useLocation();
+
+  if (!authApi.getCurrentUser()) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return children;
+}
+
+function ProtectedInventoryPage({ children }) {
+  return (
+    <RequireAuth>
+      <InventoryLayout>{children}</InventoryLayout>
+    </RequireAuth>
+  );
+}
+
 function AppRoutes() {
   return (
     <BrowserRouter>
@@ -38,29 +61,29 @@ function AppRoutes() {
         <Route path="/verify-otp" element={<OTPVerification />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Main Dashboard route (Owned by Teammate) */}
-        <Route path="/" element={<InventoryLayout><Dashboard /></InventoryLayout>} />
+        <Route path="/" element={<RootRoute />} />
+        <Route path="/dashboard" element={<ProtectedInventoryPage><Dashboard /></ProtectedInventoryPage>} />
 
         {/* Inventory Module Routes */}
-        <Route path="/inventory/products" element={<InventoryLayout><ProductsPage /></InventoryLayout>} />
-        <Route path="/inventory/products/:id" element={<InventoryLayout><ProductDetailPage /></InventoryLayout>} />
-        <Route path="/inventory/categories" element={<InventoryLayout><CategoriesPage /></InventoryLayout>} />
-        <Route path="/inventory/stock" element={<InventoryLayout><CurrentStockPage /></InventoryLayout>} />
-        <Route path="/inventory/receipts" element={<InventoryLayout><ReceiptsPage /></InventoryLayout>} />
-        <Route path="/inventory/deliveries" element={<InventoryLayout><DeliveriesPage /></InventoryLayout>} />
-        <Route path="/inventory/adjustments" element={<InventoryLayout><AdjustmentsPage /></InventoryLayout>} />
-        <Route path="/inventory/physical-verification" element={<InventoryLayout><PhysicalVerificationPage /></InventoryLayout>} />
-        <Route path="/inventory/opening-stock" element={<InventoryLayout><OpeningStockPage /></InventoryLayout>} />
-        <Route path="/inventory/movements" element={<InventoryLayout><StockMovementsPage /></InventoryLayout>} />
-        <Route path="/inventory/ledger" element={<InventoryLayout><StockLedgerPage /></InventoryLayout>} />
-        <Route path="/inventory/analytics" element={<InventoryLayout><InventoryAnalyticsPage /></InventoryLayout>} />
+        <Route path="/inventory/products" element={<ProtectedInventoryPage><ProductsPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/products/:id" element={<ProtectedInventoryPage><ProductDetailPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/categories" element={<ProtectedInventoryPage><CategoriesPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/stock" element={<ProtectedInventoryPage><CurrentStockPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/receipts" element={<ProtectedInventoryPage><ReceiptsPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/deliveries" element={<ProtectedInventoryPage><DeliveriesPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/adjustments" element={<ProtectedInventoryPage><AdjustmentsPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/physical-verification" element={<ProtectedInventoryPage><PhysicalVerificationPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/opening-stock" element={<ProtectedInventoryPage><OpeningStockPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/movements" element={<ProtectedInventoryPage><StockMovementsPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/ledger" element={<ProtectedInventoryPage><StockLedgerPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/analytics" element={<ProtectedInventoryPage><InventoryAnalyticsPage /></ProtectedInventoryPage>} />
 
         {/* Inventory Intelligence Routes */}
-        <Route path="/inventory/intelligence/anomalies" element={<InventoryLayout><AnomaliesPage /></InventoryLayout>} />
-        <Route path="/inventory/intelligence/forecast" element={<InventoryLayout><ForecastPage /></InventoryLayout>} />
-        <Route path="/inventory/intelligence/location" element={<InventoryLayout><LocationIntelligencePage /></InventoryLayout>} />
-        <Route path="/inventory/intelligence/recommendations" element={<InventoryLayout><SmartRecommendationsPage /></InventoryLayout>} />
-        <Route path="/inventory/stock-detective" element={<InventoryLayout><StockDetectivePage /></InventoryLayout>} />
+        <Route path="/inventory/intelligence/anomalies" element={<ProtectedInventoryPage><AnomaliesPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/intelligence/forecast" element={<ProtectedInventoryPage><ForecastPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/intelligence/location" element={<ProtectedInventoryPage><LocationIntelligencePage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/intelligence/recommendations" element={<ProtectedInventoryPage><SmartRecommendationsPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/stock-detective" element={<ProtectedInventoryPage><StockDetectivePage /></ProtectedInventoryPage>} />
       </Routes>
     </BrowserRouter>
   );

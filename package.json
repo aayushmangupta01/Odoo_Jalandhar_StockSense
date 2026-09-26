@@ -6,6 +6,7 @@
     "setup": "npm install --prefix server && npm install --prefix client && npm run seed --prefix server",
     "dev:server": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix client",
+    "web": "npm run dev:client",
     "dev": "npx concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "seed": "npm run seed --prefix server",
     "test": "npm run test --prefix server",

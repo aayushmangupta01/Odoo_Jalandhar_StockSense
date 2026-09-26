@@ -22,7 +22,7 @@ function Login() {
 
     try {
       await authApi.login({ email, password });
-      navigate('/', { replace: true });
+      navigate(location.state?.from?.pathname || '/dashboard', { replace: true });
     } catch (submitError) {
       setError(submitError.message || 'Sign in failed. Please try again.');
     } finally {
