@@ -7,6 +7,29 @@ const API = axios.create({
   },
 });
 
+// Automatic fallback interceptor for Windows / Firewall / Proxy 403 errors
+API.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    // If request failed with 403 Forbidden or proxy error and hasn't been retried yet
+    if ((!error.response || error.response.status === 403 || error.response.status === 502) && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const directUrl = `http://127.0.0.1:5000/api/inventory${originalRequest.url}`;
+        const fallbackResponse = await axios({
+          ...originalRequest,
+          url: directUrl,
+        });
+        return fallbackResponse;
+      } catch (fallbackError) {
+        return Promise.reject(fallbackError);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const inventoryApi = {
   getSummary: () => API.get('/summary').then((res) => res.data),
   getLowStock: () => API.get('/low-stock').then((res) => res.data),
