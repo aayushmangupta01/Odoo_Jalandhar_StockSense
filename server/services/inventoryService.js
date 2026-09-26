@@ -41,7 +41,6 @@ class InventoryService {
         VALUES (?, 'LOW_STOCK', ?)
       `).run(productId, `Product ${product.name} (SKU: ${product.sku}) is below reorder level (${totalStock} / ${product.reorder_level} ${product.uom}).`);
     } else {
-      // Resolve existing alerts for this product
       db.prepare(`UPDATE inventory_alerts SET is_resolved = 1 WHERE product_id = ?`).run(productId);
     }
   }
@@ -75,13 +74,13 @@ class InventoryService {
         // Record stock movement
         db.prepare(`
           INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, dest_location_id, reference, reason)
-          VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?, ?, ?)
-        `).run(item.product_id, item.sku, item.quantity, beforeQty, afterQty, receipt.location_id, receipt.receipt_number, `Receipt from ${receipt.supplier}`);
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(item.product_id, item.sku, 'RECEIPT', item.quantity, beforeQty, afterQty, receipt.location_id, receipt.receipt_number, `Receipt from ${receipt.supplier}`);
 
         // Record stock ledger
         db.prepare(`
           INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, dest_location, reference, reason)
-          VALUES (?, ?, 'RECEIPT', ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(item.product_id, item.sku, 'RECEIPT', item.quantity, beforeQty, afterQty, receipt.location_id, receipt.receipt_number, `Receipt from ${receipt.supplier}`);
 
         this.evaluateAlerts(item.product_id);
@@ -95,7 +94,7 @@ class InventoryService {
   }
 
   /**
-   * Validate Delivery Order (Outgoing Stock) - Atomic Transaction with Stock Availability Check
+   * Validate Delivery Order (Outgoing Stock) - Atomic Transaction with Availability Check
    */
   validateDelivery(deliveryId) {
     const transaction = db.transaction(() => {
@@ -107,7 +106,7 @@ class InventoryService {
       const items = db.prepare('SELECT di.*, p.sku, p.name as product_name FROM delivery_items di JOIN products p ON di.product_id = p.id WHERE di.delivery_id = ?').all(deliveryId);
       if (items.length === 0) throw new Error('Delivery order contains no items.');
 
-      // Check availability for all items first
+      // Check stock availability
       for (const item of items) {
         const availableStock = this.getProductStock(item.product_id, delivery.source_location_id);
         if (availableStock < item.quantity) {
@@ -129,13 +128,13 @@ class InventoryService {
         // Record stock movement
         db.prepare(`
           INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, source_location_id, reference, reason)
-          VALUES (?, ?, 'DELIVERY', ?, ?, ?, ?, ?, ?)
-        `).run(item.product_id, item.sku, -item.quantity, beforeQty, afterQty, delivery.source_location_id, delivery.delivery_number, `Delivery to ${delivery.destination}`);
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(item.product_id, item.sku, 'DELIVERY', -item.quantity, beforeQty, afterQty, delivery.source_location_id, delivery.delivery_number, `Delivery to ${delivery.destination}`);
 
         // Record stock ledger
         db.prepare(`
           INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, source_location, reference, reason)
-          VALUES (?, ?, 'DELIVERY', ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(item.product_id, item.sku, 'DELIVERY', -item.quantity, beforeQty, afterQty, delivery.source_location_id, delivery.delivery_number, `Delivery to ${delivery.destination}`);
 
         this.evaluateAlerts(item.product_id);
@@ -173,13 +172,13 @@ class InventoryService {
       // Record movement
       db.prepare(`
         INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, source_location_id, reference, reason)
-        VALUES (?, ?, 'ADJUSTMENT', ?, ?, ?, ?, ?, ?)
-      `).run(adj.product_id, adj.sku, variance, beforeQty, afterQty, adj.location_id, adj.adjustment_number, adj.reason);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(adj.product_id, adj.sku, 'ADJUSTMENT', variance, beforeQty, afterQty, adj.location_id, adj.adjustment_number, adj.reason);
 
       // Record ledger
       db.prepare(`
         INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, source_location, reference, reason)
-        VALUES (?, ?, 'ADJUSTMENT', ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(adj.product_id, adj.sku, 'ADJUSTMENT', variance, beforeQty, afterQty, adj.location_id, adj.adjustment_number, adj.reason);
 
       db.prepare(`UPDATE adjustments SET status = 'DONE' WHERE id = ?`).run(adjustmentId);
@@ -219,12 +218,12 @@ class InventoryService {
 
       db.prepare(`
         INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, dest_location_id, reference, reason)
-        VALUES (?, ?, 'OPENING_STOCK', ?, ?, ?, ?, ?, ?)
-      `).run(productId, product.sku, quantity, beforeQty, afterQty, locationId, reference, 'Initial opening stock setup');
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(productId, product.sku, 'OPENING_STOCK', quantity, beforeQty, afterQty, locationId, reference, 'Initial opening stock setup');
 
       db.prepare(`
         INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, dest_location, reference, reason)
-        VALUES (?, ?, 'OPENING_STOCK', ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(productId, product.sku, 'OPENING_STOCK', quantity, beforeQty, afterQty, locationId, reference, 'Initial opening stock setup');
 
       this.evaluateAlerts(productId);
