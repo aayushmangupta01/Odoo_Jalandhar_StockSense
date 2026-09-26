@@ -1,32 +1,71 @@
 import axios from 'axios';
 
+const fallbackBaseUrl =
+  import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001/api/inventory';
+
 const API = axios.create({
-  baseURL: '/api/inventory',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/inventory',
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 15000,
 });
 
-// Automatic fallback interceptor for Windows / Firewall / Proxy 403 errors
+const isRetryableNetworkError = (error) => {
+  if (!error) return false;
+
+  const status = error.response?.status;
+  const code = error.code;
+  const message = (error.message || '').toLowerCase();
+
+  return (
+    !error.response ||
+    status === 403 ||
+    status === 502 ||
+    code === 'ERR_NETWORK' ||
+    code === 'ECONNABORTED' ||
+    message.includes('network error') ||
+    message.includes('failed to fetch')
+  );
+};
+
+const getDirectFallbackUrl = (requestUrl = '') => {
+  const normalizedPath = requestUrl.startsWith('/')
+    ? requestUrl
+    : `/${requestUrl}`;
+  return `${fallbackBaseUrl.replace(/\/$/, '')}${normalizedPath}`;
+};
+
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    // If request failed with 403 Forbidden or proxy error and hasn't been retried yet
-    if ((!error.response || error.response.status === 403 || error.response.status === 502) && !originalRequest._retry) {
-      originalRequest._retry = true;
-      try {
-        const directUrl = `http://127.0.0.1:5000/api/inventory${originalRequest.url}`;
-        const fallbackResponse = await axios({
-          ...originalRequest,
-          url: directUrl,
-        });
-        return fallbackResponse;
-      } catch (fallbackError) {
-        return Promise.reject(fallbackError);
-      }
+    const originalRequest = error?.config;
+
+    if (!originalRequest || originalRequest._retry) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+
+    if (!isRetryableNetworkError(error)) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+
+    try {
+      const fallbackResponse = await axios({
+        ...originalRequest,
+        baseURL: undefined,
+        url: getDirectFallbackUrl(originalRequest.url || ''),
+        headers: {
+          ...originalRequest.headers,
+          'X-Direct-Fallback': 'true',
+        },
+      });
+
+      return fallbackResponse;
+    } catch (fallbackError) {
+      return Promise.reject(fallbackError);
+    }
   }
 );
 
