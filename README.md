@@ -9,6 +9,105 @@
 
 ------------------------------------------------------------------------
 
+## ⚡ Quickstart & Setup Guide (How to Run)
+
+### 📋 System Prerequisites
+- **Node.js**: `v18.0.0` or higher (Recommended: `v20` or `v22`). Check with `node -v`.
+- **npm**: `v9.0.0` or higher. Check with `npm -v`.
+- **Git**: Installed on system.
+
+---
+
+### 🚀 1-Step Automatic Setup
+Clone the repository and run the setup command from the project root:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/aayushmangupta01/Odoo_Jalandhar_StockSense.git
+cd Odoo_Jalandhar_StockSense
+
+# 2. Run automated setup (Installs client & server packages + seeds database)
+npm run setup
+
+# 3. Start application (Launches both Backend Server & Vite Frontend concurrently)
+npm run dev
+```
+
+The application will automatically start:
+- 🌐 **Frontend (Vite + React)**: `http://localhost:3000/inventory/products`
+- ⚡ **Backend API (Express + SQLite)**: `http://localhost:5000`
+
+---
+
+### 💻 Alternative 2-Terminal Manual Setup
+
+If you prefer running frontend and backend in separate terminal windows:
+
+#### Terminal 1: Backend Server (Express + SQLite)
+```bash
+cd server
+npm install
+npm run seed     # Populates realistic demo categories, products & transaction ledgers
+npm run dev      # Runs Express server on http://localhost:5000
+```
+
+#### Terminal 2: Frontend Client (React + Vite + Tailwind)
+```bash
+cd client
+npm install
+npm run dev      # Runs Vite dev server on http://localhost:3000
+```
+
+---
+
+### 🧪 Running Automated Tests
+To run the automated inventory integration test suite:
+
+```bash
+npm run test     # Runs 8/8 automated test assertions
+```
+
+---
+
+### 🛠️ Dependencies Breakdown
+
+#### Monorepo Root (`package.json`):
+- `concurrently` (^9.1.2): Runs client and server dev scripts in parallel.
+
+#### Backend (`server/package.json`):
+- `express` (^5.2.1): REST API web framework.
+- `better-sqlite3` (^13.0.3): High-performance, zero-config SQLite database engine.
+- `cors` (^2.8.6): Enables cross-origin request handling.
+- `dotenv` (^18.0.4): Environment variable loader.
+- `jsonwebtoken` (^9.0.3) & `bcrypt` (^6.0.0): Authentication utilities.
+- `nodemon` (^3.1.14): Auto-reloading development server.
+
+#### Frontend (`client/package.json`):
+- `react` (^19.3.0) & `react-dom` (^19.3.0): UI library.
+- `react-router-dom` (^7.18.4): Client-side routing.
+- `axios` (^1.20.0): HTTP client for API consumption.
+- `recharts` (^3.10.1): Interactive data visualization charts.
+- `lucide-react` (^1.48.0): Icon set.
+- `tailwindcss` (^4.3.3) & `@tailwindcss/vite` (^4.3.3): Utility-first styling engine.
+- `vite` (^8.3.1): Next-gen frontend toolchain.
+
+---
+
+### ❓ Troubleshooting & Frequently Asked Questions
+
+#### 1. `EADDRINUSE: port 5000 or 3000 already in use`
+Kill existing processes using the ports:
+- **macOS/Linux**: `lsof -i :5000` then `kill -9 <PID>`
+- **Windows**: `netstat -ano | findstr :5000` then `taskkill /PID <PID> /F`
+
+#### 2. Reset Database to Clean Demo State
+If test data gets cluttered, reset the database to clean demo state anytime with:
+```bash
+npm run seed
+```
+
+------------------------------------------------------------------------
+
 ## 1. Problem Statement
 
 Businesses often depend on manual registers, Excel sheets, and

@@ -1,0 +1,17 @@
+{
+  "name": "stocksense-monorepo",
+  "version": "1.0.0",
+  "description": "StockSense — Intelligent Inventory Management System",
+  "scripts": {
+    "setup": "npm install --prefix server && npm install --prefix client && npm run seed --prefix server",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "dev": "npx concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "seed": "npm run seed --prefix server",
+    "test": "npm run test --prefix server",
+    "build": "npm run build --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
