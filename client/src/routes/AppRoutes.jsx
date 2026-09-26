@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Dashboard from "../pages/dashboard/Dashboard";
+import Dashboard from "../pages/dashboard/dashboard";
 import InventoryLayout from "../components/layout/InventoryLayout";
 
 import ProductsPage from "../pages/inventory/ProductsPage";
@@ -27,7 +27,7 @@ function AppRoutes() {
     <BrowserRouter>
       <Routes>
         {/* Main Dashboard route (Owned by Teammate) */}
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<InventoryLayout><Dashboard /></InventoryLayout>} />
 
         {/* Inventory Module Routes */}
         <Route path="/inventory/products" element={<InventoryLayout><ProductsPage /></InventoryLayout>} />

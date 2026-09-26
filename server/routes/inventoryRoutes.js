@@ -10,7 +10,7 @@ const intelligenceService = require('../services/intelligenceService');
 // ==========================================
 router.get('/summary', (req, res) => {
   try {
-    const totalProducts = db.prepare('SELECT COUNT(*) as count FROM products WHERE status = "ACTIVE"').get().count;
+    const totalProducts = db.prepare("SELECT COUNT(*) as count FROM products WHERE status = 'ACTIVE'").get().count;
     const totalStockRow = db.prepare('SELECT SUM(quantity) as total FROM inventory').get();
     const totalStock = totalStockRow && totalStockRow.total !== null ? totalStockRow.total : 0;
 
