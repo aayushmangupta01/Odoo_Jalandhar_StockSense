@@ -202,9 +202,13 @@ class IntelligenceService {
 
     // 1. Query about specific products (e.g. Steel Rods, Copper Wire)
     const products = db.prepare('SELECT * FROM products').all();
-    const matchedProduct = products.find(
-      (p) => query.includes(p.name.toLowerCase()) || query.includes(p.sku.toLowerCase())
-    );
+    const matchedProduct = products.find((p) => {
+      const pNameLower = p.name.toLowerCase();
+      const skuLower = p.sku.toLowerCase();
+      if (query.includes(pNameLower) || query.includes(skuLower)) return true;
+      const tokens = pNameLower.split(' ').filter((t) => t.length >= 4);
+      return tokens.some((t) => query.includes(t));
+    });
 
     if (matchedProduct) {
       const stockRow = db.prepare('SELECT SUM(quantity) as total FROM inventory WHERE product_id = ?').get(matchedProduct.id);
