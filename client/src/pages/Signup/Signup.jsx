@@ -29,7 +29,7 @@ function Signup() {
       await authApi.signup({ name, email, password });
       navigate('/login', { replace: true, state: { message: 'Account created. Sign in with your new credentials.' } });
     } catch (submitError) {
-      setError(submitError.message || 'Account creation failed. Please try again.');
+      setError(submitError.response?.data?.error || submitError.message || 'Account creation failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -40,8 +40,8 @@ function Signup() {
       <form className="auth-form" onSubmit={handleSubmit}>
         <AuthField label="Your name" name="name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Full name" autoComplete="name" minLength={2} />
         <AuthField label="Work email" name="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@company.com" autoComplete="email" />
-        <AuthField label="Password" name="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" autoComplete="new-password" minLength={8} />
-        <AuthField label="Confirm password" name="confirm-password" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Enter the password again" autoComplete="new-password" minLength={8} />
+        <AuthField label="Password" name="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 10 characters" autoComplete="new-password" minLength={10} />
+        <AuthField label="Confirm password" name="confirm-password" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Enter the password again" autoComplete="new-password" minLength={10} />
         <AuthMessage type="error">{error}</AuthMessage>
         <button className="auth-submit" type="submit" disabled={isSubmitting}>
           {isSubmitting ? <LoaderCircle className="auth-spinner" size={17} /> : <UserRoundPlus size={17} />}

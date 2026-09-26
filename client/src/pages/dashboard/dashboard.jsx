@@ -15,6 +15,9 @@ import {
     Sparkles,
     Truck,
     Warehouse,
+    MapPin,
+    ClipboardCheck,
+    CircleDollarSign,
     Zap,
 } from 'lucide-react';
 
@@ -30,6 +33,12 @@ const emptySummary = {
     outOfStockItems: 0,
     pendingReceipts: 0,
     pendingDeliveries: 0,
+    pendingTransfers: 0,
+    pendingAdjustments: 0,
+    warehouseCount: 0,
+    locationCount: 0,
+    inventoryValue: 0,
+    unvaluedProductCount: 0,
 };
 
 function formatNumber(value) {
@@ -162,6 +171,7 @@ function Dashboard() {
     const [anomalies, setAnomalies] = useState([]);
     const [forecasts, setForecasts] = useState([]);
     const [locations, setLocations] = useState([]);
+    const [categoryStock, setCategoryStock] = useState([]);
 
     const [search, setSearch] = useState('');
     const [documentFilter, setDocumentFilter] = useState('All Documents');
@@ -187,6 +197,7 @@ function Dashboard() {
                 inventoryApi.getAnomalies(),
                 inventoryApi.getForecast(),
                 inventoryApi.getLocationIntelligence(),
+                inventoryApi.getCategoryStock(),
             ]);
 
             const [
@@ -197,6 +208,7 @@ function Dashboard() {
                 anomalyResult,
                 forecastResult,
                 locationResult,
+                categoryStockResult,
             ] = results;
 
             if (summaryResult.status === 'fulfilled') {
@@ -247,6 +259,14 @@ function Dashboard() {
                 setLocations(
                     Array.isArray(locationResult.value)
                         ? locationResult.value
+                        : []
+                );
+            }
+
+            if (categoryStockResult.status === 'fulfilled') {
+                setCategoryStock(
+                    Array.isArray(categoryStockResult.value)
+                        ? categoryStockResult.value
                         : []
                 );
             }
@@ -307,6 +327,16 @@ function Dashboard() {
             type: 'green',
         },
         {
+            title: metrics.unvaluedProductCount ? 'Known Inventory Value' : 'Inventory Value',
+            value: metrics.inventoryValue,
+            note: metrics.unvaluedProductCount
+                ? `${metrics.unvaluedProductCount} stocked products need a cost`
+                : 'Based on recorded unit costs',
+            icon: CircleDollarSign,
+            type: 'green',
+            currency: true,
+        },
+        {
             title: 'Low Stock Items',
             value: metrics.lowStockItems,
             note: 'Need attention',
@@ -333,6 +363,34 @@ function Dashboard() {
             note: 'Outgoing stock',
             icon: ArrowUpRight,
             type: 'violet',
+        },
+        {
+            title: 'Pending Internal Transfers',
+            value: metrics.pendingTransfers,
+            note: 'Awaiting processing',
+            icon: Truck,
+            type: 'violet',
+        },
+        {
+            title: 'Pending Adjustments',
+            value: metrics.pendingAdjustments,
+            note: 'Awaiting approval',
+            icon: ClipboardCheck,
+            type: 'amber',
+        },
+        {
+            title: 'Warehouses',
+            value: metrics.warehouseCount,
+            note: 'With recorded inventory',
+            icon: Warehouse,
+            type: 'blue',
+        },
+        {
+            title: 'Stock Locations',
+            value: metrics.locationCount,
+            note: 'With recorded inventory',
+            icon: MapPin,
+            type: 'green',
         },
     ];
 
@@ -486,7 +544,7 @@ function Dashboard() {
 
     const forecastDays = getValue(
         firstForecast,
-        ['days_remaining', 'days_to_depletion', 'depletion_days'],
+        ['coverageDays', 'days_remaining', 'days_to_depletion', 'depletion_days'],
         null
     );
 
@@ -555,7 +613,7 @@ function Dashboard() {
 
             {/* KPI CARDS */}
 
-            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
                 {metricCards.map((metric) => (
                     <MetricCard
                         key={metric.title}
@@ -563,7 +621,13 @@ function Dashboard() {
                         value={
                             isLoading && !summary
                                 ? '...'
-                                : formatNumber(metric.value)
+                                : metric.currency
+                                    ? new Intl.NumberFormat(undefined, {
+                                        style: 'currency',
+                                        currency: 'INR',
+                                        maximumFractionDigits: 2,
+                                    }).format(Number(metric.value) || 0)
+                                    : formatNumber(metric.value)
                         }
                         note={metric.note}
                         icon={metric.icon}
@@ -686,16 +750,15 @@ function Dashboard() {
                     </div>
 
                     <div className="space-y-5 p-4">
-                        {[
-                            ['Electronics', 88],
-                            ['Computers', 76],
-                            ['Accessories', 61],
-                            ['Office Supplies', 36],
-                        ].map(([name, percentage]) => (
-                            <div key={name}>
+                        {categoryStock.length ? categoryStock.slice(0, 5).map((category) => {
+                            const percentage = Number(metrics.totalStock)
+                                ? Math.round((Number(category.total_quantity) / Number(metrics.totalStock)) * 100)
+                                : 0;
+                            return (
+                            <div key={category.category_name}>
                                 <div className="mb-1.5 flex justify-between text-[11px]">
                                     <span className="text-slate-600">
-                                        {name}
+                                        {category.category_name}
                                     </span>
 
                                     <strong className="text-slate-800">
@@ -712,7 +775,10 @@ function Dashboard() {
                                     />
                                 </div>
                             </div>
-                        ))}
+                        );
+                        }) : (
+                            <p className="text-xs text-slate-400">No category stock data is available.</p>
+                        )}
                     </div>
                 </div>
 
@@ -919,14 +985,14 @@ function Dashboard() {
                         type="blue"
                         title="Depletion Forecast"
                         heading={
-                            forecasts.length && forecastDays
+                            forecasts.length && forecastDays !== null
                                 ? `${forecastProduct} may deplete in ${forecastDays} days`
-                                : 'No depletion forecast available'
+                                : 'Not enough usage history to forecast depletion'
                         }
                         description={
-                            forecasts.length
-                                ? 'Forecast based on current stock and historical usage.'
-                                : 'Forecast information will appear when inventory history is available.'
+                            forecastDays !== null
+                                ? 'Forecast based on current stock and recorded deliveries from the last 14 days.'
+                                : 'A depletion estimate requires recent delivery history; no default usage rate is assumed.'
                         }
                         action="View forecast"
                     />

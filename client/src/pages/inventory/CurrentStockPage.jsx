@@ -88,6 +88,26 @@ export function CurrentStockPage() {
       ),
     },
     {
+      header: 'Available',
+      accessor: 'available_quantity',
+      render: (row) => <span className="font-mono text-xs text-slate-200">{row.available_quantity} {row.uom}</span>,
+    },
+    {
+      header: 'Reserved',
+      accessor: 'reserved_quantity',
+      render: (row) => <span className="font-mono text-xs text-slate-400">{row.reserved_quantity || 0} {row.uom}</span>,
+    },
+    {
+      header: 'Incoming',
+      accessor: 'incoming_quantity',
+      render: (row) => <span className="font-mono text-xs text-emerald-300">{row.incoming_quantity} {row.uom}</span>,
+    },
+    {
+      header: 'Outgoing',
+      accessor: 'outgoing_quantity',
+      render: (row) => <span className="font-mono text-xs text-amber-300">{row.outgoing_quantity} {row.uom}</span>,
+    },
+    {
       header: 'Reorder Level',
       accessor: 'reorder_level',
       render: (row) => (

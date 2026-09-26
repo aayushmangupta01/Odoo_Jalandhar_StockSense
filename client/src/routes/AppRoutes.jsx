@@ -27,6 +27,15 @@ import Signup from "../pages/Signup/Signup";
 import ForgotPassword from "../pages/Login/ForgotPassword";
 import OTPVerification from "../pages/Login/OTPVerification";
 import ResetPassword from "../pages/Login/ResetPassword";
+import StaffDashboard from "../pages/dashboard/StaffDashboard";
+import { authApi as currentAuthApi } from "../services/authApi";
+import {
+  AdjustmentRequestsPage,
+  InternalTransfersPage,
+  MyActivityPage,
+  StockAlertsPage,
+} from "../pages/inventory/RoleWorkflowsPage";
+import { AdminUsersPage, AuditLogsPage } from "../pages/admin/AdminManagementPages";
 
 function RootRoute() {
   return <Navigate to={authApi.getCurrentUser() ? "/dashboard" : "/login"} replace />;
@@ -40,6 +49,24 @@ function RequireAuth({ children }) {
   }
 
   return children;
+}
+
+function RequireAdmin({ children }) {
+  const location = useLocation();
+  const user = currentAuthApi.getCurrentUser();
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (user.role !== "admin") return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
+function DashboardRoute() {
+  return currentAuthApi.getCurrentUser()?.role === "staff"
+    ? <StaffDashboard />
+    : <Dashboard />;
+}
+
+function AdminPage({ children }) {
+  return <RequireAdmin><InventoryLayout>{children}</InventoryLayout></RequireAdmin>;
 }
 
 function ProtectedInventoryPage({ children }) {
@@ -62,28 +89,34 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/" element={<RootRoute />} />
-        <Route path="/dashboard" element={<ProtectedInventoryPage><Dashboard /></ProtectedInventoryPage>} />
+        <Route path="/dashboard" element={<ProtectedInventoryPage><DashboardRoute /></ProtectedInventoryPage>} />
 
         {/* Inventory Module Routes */}
         <Route path="/inventory/products" element={<ProtectedInventoryPage><ProductsPage /></ProtectedInventoryPage>} />
         <Route path="/inventory/products/:id" element={<ProtectedInventoryPage><ProductDetailPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/categories" element={<ProtectedInventoryPage><CategoriesPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/categories" element={<AdminPage><CategoriesPage /></AdminPage>} />
         <Route path="/inventory/stock" element={<ProtectedInventoryPage><CurrentStockPage /></ProtectedInventoryPage>} />
         <Route path="/inventory/receipts" element={<ProtectedInventoryPage><ReceiptsPage /></ProtectedInventoryPage>} />
         <Route path="/inventory/deliveries" element={<ProtectedInventoryPage><DeliveriesPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/adjustments" element={<ProtectedInventoryPage><AdjustmentsPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/physical-verification" element={<ProtectedInventoryPage><PhysicalVerificationPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/opening-stock" element={<ProtectedInventoryPage><OpeningStockPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/movements" element={<ProtectedInventoryPage><StockMovementsPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/ledger" element={<ProtectedInventoryPage><StockLedgerPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/analytics" element={<ProtectedInventoryPage><InventoryAnalyticsPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/transfers" element={<ProtectedInventoryPage><InternalTransfersPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/adjustment-requests" element={<ProtectedInventoryPage><AdjustmentRequestsPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/alerts" element={<ProtectedInventoryPage><StockAlertsPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/my-activity" element={<ProtectedInventoryPage><MyActivityPage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/adjustments" element={<AdminPage><AdjustmentsPage /></AdminPage>} />
+        <Route path="/inventory/physical-verification" element={<AdminPage><PhysicalVerificationPage /></AdminPage>} />
+        <Route path="/inventory/opening-stock" element={<AdminPage><OpeningStockPage /></AdminPage>} />
+        <Route path="/inventory/movements" element={<AdminPage><StockMovementsPage /></AdminPage>} />
+        <Route path="/inventory/ledger" element={<AdminPage><StockLedgerPage /></AdminPage>} />
+        <Route path="/inventory/analytics" element={<AdminPage><InventoryAnalyticsPage /></AdminPage>} />
 
         {/* Inventory Intelligence Routes */}
-        <Route path="/inventory/intelligence/anomalies" element={<ProtectedInventoryPage><AnomaliesPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/intelligence/forecast" element={<ProtectedInventoryPage><ForecastPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/intelligence/location" element={<ProtectedInventoryPage><LocationIntelligencePage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/intelligence/recommendations" element={<ProtectedInventoryPage><SmartRecommendationsPage /></ProtectedInventoryPage>} />
-        <Route path="/inventory/stock-detective" element={<ProtectedInventoryPage><StockDetectivePage /></ProtectedInventoryPage>} />
+        <Route path="/inventory/intelligence/anomalies" element={<AdminPage><AnomaliesPage /></AdminPage>} />
+        <Route path="/inventory/intelligence/forecast" element={<AdminPage><ForecastPage /></AdminPage>} />
+        <Route path="/inventory/intelligence/location" element={<AdminPage><LocationIntelligencePage /></AdminPage>} />
+        <Route path="/inventory/intelligence/recommendations" element={<AdminPage><SmartRecommendationsPage /></AdminPage>} />
+        <Route path="/inventory/stock-detective" element={<AdminPage><StockDetectivePage /></AdminPage>} />
+        <Route path="/inventory/audit-logs" element={<AdminPage><AuditLogsPage /></AdminPage>} />
+        <Route path="/admin/users" element={<AdminPage><AdminUsersPage /></AdminPage>} />
       </Routes>
     </BrowserRouter>
   );

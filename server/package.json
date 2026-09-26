@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
+    "setup:admin": "node scripts/setup-admin.js",
     "seed": "node scripts/seed.js",
     "test": "node scripts/test-inventory.js"
   },

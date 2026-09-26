@@ -1,13 +1,18 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcrypt');
 
-const dataDir = path.join(__dirname, '../data');
+const dataDir = process.env.STOCKSENSE_DB_PATH
+  ? path.dirname(path.resolve(process.env.STOCKSENSE_DB_PATH))
+  : path.join(__dirname, '../data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const dbPath = path.join(dataDir, 'stocksense.db');
+const dbPath = process.env.STOCKSENSE_DB_PATH
+  ? path.resolve(process.env.STOCKSENSE_DB_PATH)
+  : path.join(dataDir, 'stocksense.db');
 const db = new Database(dbPath, { verbose: null });
 
 // Enable Foreign Keys & Write-Ahead Logging for concurrency
@@ -203,7 +208,109 @@ function initDatabase() {
       recommendation TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('admin', 'staff')),
+      warehouse_id TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS auth_sessions (
+      token_hash TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS adjustment_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER NOT NULL REFERENCES products(id),
+      location_id TEXT NOT NULL,
+      warehouse_id TEXT NOT NULL,
+      system_quantity REAL NOT NULL,
+      physical_quantity REAL NOT NULL,
+      variance REAL NOT NULL,
+      reason TEXT NOT NULL,
+      requested_by INTEGER NOT NULL REFERENCES users(id),
+      status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+      reviewed_by INTEGER REFERENCES users(id),
+      review_note TEXT,
+      reviewed_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS internal_transfers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transfer_number TEXT NOT NULL UNIQUE,
+      source_location_id TEXT NOT NULL,
+      destination_location_id TEXT NOT NULL,
+      source_warehouse_id TEXT NOT NULL,
+      destination_warehouse_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'DRAFT',
+      assigned_user_id INTEGER REFERENCES users(id),
+      created_by INTEGER NOT NULL REFERENCES users(id),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS internal_transfer_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transfer_id INTEGER NOT NULL REFERENCES internal_transfers(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id),
+      quantity REAL NOT NULL CHECK (quantity > 0)
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      user_name TEXT NOT NULL,
+      action TEXT NOT NULL,
+      entity TEXT NOT NULL,
+      entity_id TEXT,
+      previous_value TEXT,
+      new_value TEXT,
+      location_id TEXT,
+      warehouse_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
+
+  const addColumnIfMissing = (table, column, definition) => {
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+    if (!columns.some((entry) => entry.name === column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
+  };
+
+  addColumnIfMissing('receipts', 'assigned_user_id', 'INTEGER REFERENCES users(id)');
+  addColumnIfMissing('deliveries', 'assigned_user_id', 'INTEGER REFERENCES users(id)');
+  addColumnIfMissing('users', 'warehouse_id', 'TEXT');
+  addColumnIfMissing('products', 'unit_cost', 'REAL');
+
+  const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim().toLowerCase();
+  const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+  const bootstrapName = process.env.BOOTSTRAP_ADMIN_NAME?.trim() || 'StockSense Administrator';
+  if (bootstrapEmail || bootstrapPassword) {
+    if (!bootstrapEmail || !bootstrapPassword || bootstrapPassword.length < 12) {
+      throw new Error('Set both BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD (at least 12 characters).');
+    }
+    const existingUser = db.prepare('SELECT id, role FROM users WHERE email = ? COLLATE NOCASE').get(bootstrapEmail);
+    if (existingUser && existingUser.role !== 'admin') {
+      throw new Error('The bootstrap Admin email already belongs to a non-admin account. Set a different BOOTSTRAP_ADMIN_EMAIL.');
+    }
+    if (!existingUser) {
+      db.prepare(`
+        INSERT INTO users (name, email, password_hash, role)
+        VALUES (?, ?, ?, 'admin')
+      `).run(bootstrapName, bootstrapEmail, bcrypt.hashSync(bootstrapPassword, 12));
+    }
+  }
 }
 
 initDatabase();

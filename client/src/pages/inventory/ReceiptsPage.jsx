@@ -6,11 +6,14 @@ import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/ToastContext';
 import { ArrowDownLeft, Plus, CheckCircle2, AlertCircle } from 'lucide-react';
+import { authApi } from '../../services/authApi';
 
 export function ReceiptsPage() {
   const { showToast } = useToast();
+  const isAdmin = authApi.getCurrentUser()?.role === 'admin';
   const [receipts, setReceipts] = useState([]);
   const [products, setProducts] = useState([]);
+  const [staffUsers, setStaffUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modal
@@ -19,10 +22,11 @@ export function ReceiptsPage() {
   const [formData, setFormData] = useState({
     supplier: '',
     date: new Date().toISOString().split('T')[0],
-    warehouse_id: 'WH-01',
+    warehouse_id: authApi.getCurrentUser()?.warehouseId || 'WH-01',
     location_id: 'LOC-MAIN-01',
     notes: '',
     reference: '',
+    assigned_user_id: '',
     items: [{ product_id: '', quantity: 10, unit: 'kg', unit_price: 100 }],
   });
 
@@ -35,6 +39,9 @@ export function ReceiptsPage() {
       ]);
       setReceipts(recData);
       setProducts(prodData);
+      if (isAdmin) {
+        setStaffUsers((await authApi.getUsers()).filter((account) => account.role === 'staff' && account.isActive));
+      }
     } catch (err) {
       showToast('Failed to load receipts: ' + err.message, 'error');
     } finally {
@@ -55,7 +62,10 @@ export function ReceiptsPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await inventoryApi.createReceipt(formData);
+      const res = await inventoryApi.createReceipt({
+        ...formData,
+        assigned_user_id: formData.assigned_user_id ? Number(formData.assigned_user_id) : null,
+      });
       showToast(`Draft Receipt ${res.receiptNumber} created! (Stock un-changed until validated)`, 'info');
       setIsModalOpen(false);
       fetchReceipts();
@@ -130,7 +140,19 @@ export function ReceiptsPage() {
       sortable: false,
       render: (row) => (
         <div className="flex items-center gap-2">
-          {row.status === 'DRAFT' || row.status === 'WAITING' ? (
+          {isAdmin && ['DRAFT', 'WAITING'].includes(row.status) && (
+            <Button variant="outline" size="sm" onClick={async () => {
+              try {
+                await inventoryApi.updateReceiptStatus(row.id, 'READY');
+                await fetchReceipts();
+              } catch (err) {
+                showToast(err.response?.data?.error || err.message, 'error');
+              }
+            }}>
+              Mark ready
+            </Button>
+          )}
+          {(isAdmin || ['READY', 'WAITING'].includes(row.status)) && ['DRAFT', 'WAITING', 'READY'].includes(row.status) ? (
             <Button
               variant="success"
               size="sm"
@@ -139,9 +161,22 @@ export function ReceiptsPage() {
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Validate & Receive
             </Button>
           ) : (
-            <span className="text-xs text-emerald-400 font-medium flex items-center gap-1 font-mono">
-              ✓ Stock Updated
+            <span className={`text-xs font-medium ${row.status === 'CANCELED' ? 'text-slate-500' : 'text-emerald-400'}`}>
+              {row.status === 'CANCELED' ? 'Canceled' : row.status === 'DONE' ? 'Stock updated' : row.status}
             </span>
+          )}
+          {isAdmin && ['DRAFT', 'WAITING', 'READY'].includes(row.status) && (
+            <Button variant="danger" size="sm" onClick={async () => {
+              if (!window.confirm(`Cancel receipt ${row.receipt_number}?`)) return;
+              try {
+                await inventoryApi.updateReceiptStatus(row.id, 'CANCELED');
+                await fetchReceipts();
+              } catch (err) {
+                showToast(err.response?.data?.error || err.message, 'error');
+              }
+            }}>
+              Cancel
+            </Button>
           )}
         </div>
       ),
@@ -161,7 +196,7 @@ export function ReceiptsPage() {
         </div>
 
         <Button onClick={() => setIsModalOpen(true)} icon={Plus}>
-          Create Receipt
+          {isAdmin ? 'Create Receipt' : 'Create Limited Receipt'}
         </Button>
       </div>
 
@@ -235,6 +270,19 @@ export function ReceiptsPage() {
                 className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:border-cyan-500 focus:outline-none"
               />
             </div>
+            {isAdmin && <>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Warehouse ID</label>
+                <input required value={formData.warehouse_id} onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:border-cyan-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Assign to staff</label>
+                <select value={formData.assigned_user_id} onChange={(e) => setFormData({ ...formData, assigned_user_id: e.target.value })} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:border-cyan-500 focus:outline-none">
+                  <option value="">No assignment</option>
+                  {staffUsers.filter((account) => account.warehouseId === formData.warehouse_id).map((account) => <option key={account.id} value={account.id}>{account.name} · {account.email}</option>)}
+                </select>
+              </div>
+            </>}
           </div>
 
           {/* Line Items */}

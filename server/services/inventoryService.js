@@ -48,19 +48,27 @@ class InventoryService {
   /**
    * Validate Receipt (Incoming Stock) - Atomic Transaction
    */
-  validateReceipt(receiptId) {
+  validateReceipt(receiptId, performedBy = 'Inventory Admin') {
     const transaction = db.transaction(() => {
       const receipt = db.prepare('SELECT * FROM receipts WHERE id = ?').get(receiptId);
       if (!receipt) throw new Error('Receipt not found');
       if (receipt.status === 'DONE') throw new Error('Receipt has already been validated and processed.');
       if (receipt.status === 'CANCELED') throw new Error('Cannot validate a canceled receipt.');
 
-      const items = db.prepare('SELECT ri.*, p.sku, p.name as product_name FROM receipt_items ri JOIN products p ON ri.product_id = p.id WHERE ri.receipt_id = ?').all(receiptId);
+      const items = db.prepare('SELECT ri.*, p.sku, p.name as product_name, p.unit_cost FROM receipt_items ri JOIN products p ON ri.product_id = p.id WHERE ri.receipt_id = ?').all(receiptId);
       if (items.length === 0) throw new Error('Receipt contains no items.');
 
       for (const item of items) {
         const beforeQty = this.getProductStock(item.product_id, receipt.location_id);
         const afterQty = beforeQty + item.quantity;
+        if (Number(item.unit_price) > 0) {
+          const totalStock = this.getTotalProductStock(item.product_id);
+          const nextCost = totalStock + item.quantity > 0
+            ? ((totalStock * Number(item.unit_cost || 0)) + (item.quantity * Number(item.unit_price))) / (totalStock + item.quantity)
+            : Number(item.unit_price);
+          db.prepare('UPDATE products SET unit_cost = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+            .run(nextCost, item.product_id);
+        }
 
         // Upsert inventory
         db.prepare(`
@@ -73,15 +81,15 @@ class InventoryService {
 
         // Record stock movement
         db.prepare(`
-          INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, dest_location_id, reference, reason)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(item.product_id, item.sku, 'RECEIPT', item.quantity, beforeQty, afterQty, receipt.location_id, receipt.receipt_number, `Receipt from ${receipt.supplier}`);
+          INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, dest_location_id, user_id, reference, reason)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(item.product_id, item.sku, 'RECEIPT', item.quantity, beforeQty, afterQty, receipt.location_id, performedBy, receipt.receipt_number, `Receipt from ${receipt.supplier}`);
 
         // Record stock ledger
         db.prepare(`
-          INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, dest_location, reference, reason)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(item.product_id, item.sku, 'RECEIPT', item.quantity, beforeQty, afterQty, receipt.location_id, receipt.receipt_number, `Receipt from ${receipt.supplier}`);
+          INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, dest_location, reference, user, reason)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(item.product_id, item.sku, 'RECEIPT', item.quantity, beforeQty, afterQty, receipt.location_id, receipt.receipt_number, performedBy, `Receipt from ${receipt.supplier}`);
 
         this.evaluateAlerts(item.product_id);
       }
@@ -96,7 +104,7 @@ class InventoryService {
   /**
    * Validate Delivery Order (Outgoing Stock) - Atomic Transaction with Availability Check
    */
-  validateDelivery(deliveryId) {
+  validateDelivery(deliveryId, performedBy = 'Inventory Admin') {
     const transaction = db.transaction(() => {
       const delivery = db.prepare('SELECT * FROM deliveries WHERE id = ?').get(deliveryId);
       if (!delivery) throw new Error('Delivery order not found');
@@ -127,15 +135,15 @@ class InventoryService {
 
         // Record stock movement
         db.prepare(`
-          INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, source_location_id, reference, reason)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(item.product_id, item.sku, 'DELIVERY', -item.quantity, beforeQty, afterQty, delivery.source_location_id, delivery.delivery_number, `Delivery to ${delivery.destination}`);
+          INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, source_location_id, user_id, reference, reason)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(item.product_id, item.sku, 'DELIVERY', -item.quantity, beforeQty, afterQty, delivery.source_location_id, performedBy, delivery.delivery_number, `Delivery to ${delivery.destination}`);
 
         // Record stock ledger
         db.prepare(`
-          INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, source_location, reference, reason)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(item.product_id, item.sku, 'DELIVERY', -item.quantity, beforeQty, afterQty, delivery.source_location_id, delivery.delivery_number, `Delivery to ${delivery.destination}`);
+          INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, source_location, reference, user, reason)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(item.product_id, item.sku, 'DELIVERY', -item.quantity, beforeQty, afterQty, delivery.source_location_id, delivery.delivery_number, performedBy, `Delivery to ${delivery.destination}`);
 
         this.evaluateAlerts(item.product_id);
       }
@@ -150,7 +158,7 @@ class InventoryService {
   /**
    * Complete Physical Stock Adjustment - Atomic Transaction
    */
-  completeAdjustment(adjustmentId) {
+  completeAdjustment(adjustmentId, performedBy = 'Inventory Admin') {
     const transaction = db.transaction(() => {
       const adj = db.prepare('SELECT a.*, p.sku, p.name as product_name FROM adjustments a JOIN products p ON a.product_id = p.id WHERE a.id = ?').get(adjustmentId);
       if (!adj) throw new Error('Adjustment record not found');
@@ -171,15 +179,15 @@ class InventoryService {
 
       // Record movement
       db.prepare(`
-        INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, source_location_id, reference, reason)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(adj.product_id, adj.sku, 'ADJUSTMENT', variance, beforeQty, afterQty, adj.location_id, adj.adjustment_number, adj.reason);
+        INSERT INTO stock_movements (product_id, sku, operation, quantity, before_quantity, after_quantity, source_location_id, user_id, reference, reason)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(adj.product_id, adj.sku, 'ADJUSTMENT', variance, beforeQty, afterQty, adj.location_id, performedBy, adj.adjustment_number, adj.reason);
 
       // Record ledger
       db.prepare(`
-        INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, source_location, reference, reason)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(adj.product_id, adj.sku, 'ADJUSTMENT', variance, beforeQty, afterQty, adj.location_id, adj.adjustment_number, adj.reason);
+        INSERT INTO stock_ledger (product_id, sku, operation, quantity_change, previous_quantity, new_quantity, source_location, reference, user, reason)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(adj.product_id, adj.sku, 'ADJUSTMENT', variance, beforeQty, afterQty, adj.location_id, performedBy, adj.adjustment_number, adj.reason);
 
       db.prepare(`UPDATE adjustments SET status = 'DONE' WHERE id = ?`).run(adjustmentId);
 

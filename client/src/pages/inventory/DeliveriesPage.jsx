@@ -6,11 +6,14 @@ import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/ToastContext';
 import { ArrowUpRight, Plus, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { authApi } from '../../services/authApi';
 
 export function DeliveriesPage() {
   const { showToast } = useToast();
+  const isAdmin = authApi.getCurrentUser()?.role === 'admin';
   const [deliveries, setDeliveries] = useState([]);
   const [products, setProducts] = useState([]);
+  const [staffUsers, setStaffUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modal
@@ -19,10 +22,11 @@ export function DeliveriesPage() {
   const [formData, setFormData] = useState({
     destination: '',
     date: new Date().toISOString().split('T')[0],
-    source_warehouse_id: 'WH-01',
+    source_warehouse_id: authApi.getCurrentUser()?.warehouseId || 'WH-01',
     source_location_id: 'LOC-MAIN-01',
     reference: '',
     notes: '',
+    assigned_user_id: '',
     items: [{ product_id: '', quantity: 10, unit: 'kg' }],
   });
 
@@ -35,6 +39,9 @@ export function DeliveriesPage() {
       ]);
       setDeliveries(delData);
       setProducts(prodData);
+      if (isAdmin) {
+        setStaffUsers((await authApi.getUsers()).filter((account) => account.role === 'staff' && account.isActive));
+      }
     } catch (err) {
       showToast('Failed to load deliveries: ' + err.message, 'error');
     } finally {
@@ -55,7 +62,10 @@ export function DeliveriesPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await inventoryApi.createDelivery(formData);
+      const res = await inventoryApi.createDelivery({
+        ...formData,
+        assigned_user_id: formData.assigned_user_id ? Number(formData.assigned_user_id) : null,
+      });
       showToast(`Draft Delivery Order ${res.deliveryNumber} created!`, 'info');
       setIsModalOpen(false);
       fetchDeliveries();
@@ -131,7 +141,19 @@ export function DeliveriesPage() {
       sortable: false,
       render: (row) => (
         <div className="flex items-center gap-2">
-          {row.status === 'DRAFT' || row.status === 'WAITING' || row.status === 'READY' ? (
+          {isAdmin && ['DRAFT', 'WAITING'].includes(row.status) && (
+            <Button variant="outline" size="sm" onClick={async () => {
+              try {
+                await inventoryApi.updateDeliveryStatus(row.id, 'READY');
+                await fetchDeliveries();
+              } catch (err) {
+                showToast(err.response?.data?.error || err.message, 'error');
+              }
+            }}>
+              Mark ready
+            </Button>
+          )}
+          {(isAdmin || ['READY', 'WAITING'].includes(row.status)) && ['DRAFT', 'WAITING', 'READY'].includes(row.status) ? (
             <Button
               variant="danger"
               size="sm"
@@ -140,9 +162,22 @@ export function DeliveriesPage() {
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Validate & Dispatch
             </Button>
           ) : (
-            <span className="text-xs text-emerald-400 font-medium flex items-center gap-1 font-mono">
-              ✓ Stock Deducted
+            <span className={`text-xs font-medium ${row.status === 'CANCELED' ? 'text-slate-500' : 'text-emerald-400'}`}>
+              {row.status === 'CANCELED' ? 'Canceled' : row.status === 'DONE' ? 'Stock deducted' : row.status}
             </span>
+          )}
+          {isAdmin && ['DRAFT', 'WAITING', 'READY'].includes(row.status) && (
+            <Button variant="danger" size="sm" onClick={async () => {
+              if (!window.confirm(`Cancel delivery ${row.delivery_number}?`)) return;
+              try {
+                await inventoryApi.updateDeliveryStatus(row.id, 'CANCELED');
+                await fetchDeliveries();
+              } catch (err) {
+                showToast(err.response?.data?.error || err.message, 'error');
+              }
+            }}>
+              Cancel
+            </Button>
           )}
         </div>
       ),
@@ -162,7 +197,7 @@ export function DeliveriesPage() {
         </div>
 
         <Button onClick={() => setIsModalOpen(true)} icon={Plus}>
-          Create Delivery Order
+          {isAdmin ? 'Create Delivery Order' : 'Create Limited Delivery'}
         </Button>
       </div>
 
@@ -236,6 +271,19 @@ export function DeliveriesPage() {
                 className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:border-cyan-500 focus:outline-none"
               />
             </div>
+            {isAdmin && <>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Source Warehouse ID</label>
+                <input required value={formData.source_warehouse_id} onChange={(e) => setFormData({ ...formData, source_warehouse_id: e.target.value })} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:border-cyan-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Assign to staff</label>
+                <select value={formData.assigned_user_id} onChange={(e) => setFormData({ ...formData, assigned_user_id: e.target.value })} className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm focus:border-cyan-500 focus:outline-none">
+                  <option value="">No assignment</option>
+                  {staffUsers.filter((account) => account.warehouseId === formData.source_warehouse_id).map((account) => <option key={account.id} value={account.id}>{account.name} · {account.email}</option>)}
+                </select>
+              </div>
+            </>}
           </div>
 
           {/* Line Items */}

@@ -1,127 +1,94 @@
-const MOCK_OTP = '246810';
-const SESSION_KEY = 'stocksense.mock-auth-session';
-const accounts = new Map([
-  ['demo@stocksense.app', { name: 'Inventory Manager', password: 'StockSense123!' }],
-]);
-const resetChallenges = new Map();
-const verifiedResets = new Set();
-let activeSession = null;
+import axios from 'axios';
 
-function simulateRequest(result) {
-  return new Promise((resolve) => {
-    window.setTimeout(() => resolve(result), 350);
-  });
-}
+const TOKEN_KEY = 'stocksense.auth-token';
+const USER_KEY = 'stocksense.auth-user';
+const API = axios.create({
+  baseURL: import.meta.env.VITE_AUTH_API_BASE_URL || '/api/auth',
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 15000,
+});
 
-function normalizeEmail(email) {
-  return email.trim().toLowerCase();
-}
-
-function storeSession(user) {
-  activeSession = user;
+function getStoredToken() {
   try {
-    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
-  } catch {
-    // Keep the mock session in memory when browser storage is unavailable.
-  }
-}
-
-function readSession() {
-  if (activeSession) return activeSession;
-
-  try {
-    const session = window.sessionStorage.getItem(SESSION_KEY);
-    if (!session) return null;
-
-    const user = JSON.parse(session);
-    return user && typeof user.email === 'string' ? user : null;
+    return window.sessionStorage.getItem(TOKEN_KEY);
   } catch {
     return null;
   }
 }
 
+function storeSession(token, user) {
+  window.sessionStorage.setItem(TOKEN_KEY, token);
+  window.sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+function clearSession() {
+  window.sessionStorage.removeItem(TOKEN_KEY);
+  window.sessionStorage.removeItem(USER_KEY);
+}
+
 export const authApi = {
-  async login({ email, password }) {
-    const normalizedEmail = normalizeEmail(email);
-    const account = accounts.get(normalizedEmail);
-    await simulateRequest();
-
-    if (!account || account.password !== password) {
-      throw new Error('The email or password is incorrect. Please try again.');
-    }
-
-    const user = { email: normalizedEmail, name: account.name };
-    storeSession(user);
-    return { user };
+  async login({ email, password, role }) {
+    const { data } = await API.post('/login', { email, password, role });
+    storeSession(data.token, data.user);
+    return data;
   },
 
   getCurrentUser() {
-    return readSession();
+    try {
+      const serializedUser = window.sessionStorage.getItem(USER_KEY);
+      const token = getStoredToken();
+      if (!serializedUser || !token) return null;
+      const user = JSON.parse(serializedUser);
+      return user && typeof user.email === 'string' ? user : null;
+    } catch {
+      return null;
+    }
   },
 
-  logout() {
-    activeSession = null;
-    try {
-      window.sessionStorage.removeItem(SESSION_KEY);
-    } catch {
-      // The current in-memory session is already cleared.
+  getToken() {
+    return getStoredToken();
+  },
+
+  async logout() {
+    const token = getStoredToken();
+    clearSession();
+    if (token) {
+      await API.post('/logout', {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
     }
   },
 
   async signup({ name, email, password }) {
-    const normalizedEmail = normalizeEmail(email);
-    await simulateRequest();
-
-    if (accounts.has(normalizedEmail)) {
-      throw new Error('An account with this email already exists.');
-    }
-
-    accounts.set(normalizedEmail, { name: name.trim(), password });
-    return { message: 'Your StockSense account is ready.' };
+    const { data } = await API.post('/signup', { name, email, password });
+    return data;
   },
 
-  async requestPasswordReset(email) {
-    const normalizedEmail = normalizeEmail(email);
-    await simulateRequest();
-    resetChallenges.set(normalizedEmail, MOCK_OTP);
-    verifiedResets.delete(normalizedEmail);
-
-    return {
-      email: normalizedEmail,
-      message: 'A verification code has been prepared for this address.',
-      mockCode: MOCK_OTP,
-    };
+  async requestPasswordReset() {
+    throw new Error('Password recovery is not configured because this project has no email delivery service.');
   },
 
-  async verifyPasswordResetCode({ email, code }) {
-    const normalizedEmail = normalizeEmail(email);
-    await simulateRequest();
-
-    if (resetChallenges.get(normalizedEmail) !== code.trim()) {
-      throw new Error('That verification code is not correct. Check it and try again.');
-    }
-
-    verifiedResets.add(normalizedEmail);
-    return { email: normalizedEmail };
+  async verifyPasswordResetCode() {
+    throw new Error('Password recovery is not configured because this project has no email delivery service.');
   },
 
-  async resetPassword({ email, password }) {
-    const normalizedEmail = normalizeEmail(email);
-    await simulateRequest();
+  async resetPassword() {
+    throw new Error('Password recovery is not configured because this project has no email delivery service.');
+  },
 
-    if (!verifiedResets.has(normalizedEmail)) {
-      throw new Error('Verify your email code before resetting the password.');
-    }
+  async getUsers() {
+    const { data } = await API.get('/users', { headers: { Authorization: `Bearer ${getStoredToken()}` } });
+    return data;
+  },
 
-    const account = accounts.get(normalizedEmail);
-    if (!account) {
-      throw new Error('No account was found for this email. Create an account first.');
-    }
+  async createUser(user) {
+    const { data } = await API.post('/users', user, { headers: { Authorization: `Bearer ${getStoredToken()}` } });
+    return data;
+  },
 
-    accounts.set(normalizedEmail, { ...account, password });
-    resetChallenges.delete(normalizedEmail);
-    verifiedResets.delete(normalizedEmail);
-    return { message: 'Your password has been updated.' };
+  async updateUser(id, updates) {
+    const { data } = await API.patch(`/users/${id}`, updates, { headers: { Authorization: `Bearer ${getStoredToken()}` } });
+    return data;
   },
 };
 

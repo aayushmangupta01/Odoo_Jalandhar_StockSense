@@ -20,12 +20,20 @@ import {
   Sparkles,
   Bot,
   Warehouse,
-  ChevronRight
+  ChevronRight,
+  UserRoundCog,
+  ScrollText,
+  ClipboardList,
+  BellRing,
+  Truck,
 } from 'lucide-react';
+import { authApi } from '../../services/authApi';
 
 export function Sidebar() {
   const { pathname } = useLocation();
   const [expandedGroups, setExpandedGroups] = useState({});
+  const user = authApi.getCurrentUser();
+  const isAdmin = user?.role === 'admin';
 
   const navSection = (title, groups) => (
     <div className="mb-5">
@@ -162,6 +170,29 @@ export function Sidebar() {
     },
   ];
 
+  const staffWork = [
+    {
+      id: 'warehouse-work',
+      label: 'My Warehouse Work',
+      items: [
+        { path: '/inventory/products', label: 'Products', icon: Package },
+        { path: '/inventory/stock', label: 'Stock', icon: Boxes },
+        { path: '/inventory/receipts', label: 'My Receipts', icon: ArrowDownLeft },
+        { path: '/inventory/deliveries', label: 'My Deliveries', icon: ArrowUpRight },
+        { path: '/inventory/transfers', label: 'My Transfers', icon: Truck },
+      ],
+    },
+    {
+      id: 'staff-follow-up',
+      label: 'Alerts & Follow-up',
+      items: [
+        { path: '/inventory/alerts', label: 'Alerts', icon: BellRing },
+        { path: '/inventory/adjustment-requests', label: 'Adjustment Requests', icon: ClipboardList },
+        { path: '/inventory/my-activity', label: 'My Activity', icon: History },
+      ],
+    },
+  ];
+
   return (
     <aside className="w-64 bg-slate-950 border-r border-slate-800/80 flex flex-col h-screen sticky top-0 z-30 select-none">
       {/* Brand Header */}
@@ -181,10 +212,10 @@ export function Sidebar() {
 
       {/* Navigation Scrollable */}
       <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
-        {/* Main Dashboard Link (Owned by teammate) */}
+        {/* Role-specific dashboard */}
         <div className="mb-4">
           <NavLink
-            to="/"
+            to="/dashboard"
             end
             className={({ isActive }) =>
               `flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
@@ -196,25 +227,45 @@ export function Sidebar() {
           >
             <div className="flex items-center gap-2.5">
               <LayoutDashboard className="w-4 h-4" />
-              <span>Main Dashboard</span>
+              <span>Dashboard</span>
             </div>
-            <span className="text-[9px] text-slate-500 font-mono">GLOBAL</span>
+            <span className="text-[9px] text-slate-500 font-mono">{isAdmin ? 'ADMIN' : 'STAFF'}</span>
           </NavLink>
         </div>
 
-        {navSection('Inventory Module', coreInventory)}
-        {navSection('Inventory Intelligence', intelligence)}
+        {isAdmin ? (
+          <>
+            {navSection('Inventory Module', coreInventory)}
+            {navSection('Stock Intelligence', intelligence)}
+            {navSection('Administration', [
+              {
+                id: 'management',
+                label: 'Management',
+                items: [
+                  { path: '/inventory/transfers', label: 'Internal Transfers', icon: Truck },
+                  { path: '/inventory/adjustment-requests', label: 'Adjustment Approvals', icon: ClipboardList },
+                  { path: '/inventory/audit-logs', label: 'Audit Logs', icon: ScrollText },
+                  { path: '/admin/users', label: 'Users & Permissions', icon: UserRoundCog },
+                ],
+              },
+            ])}
+          </>
+        ) : (
+          navSection('Staff Workspace', staffWork)
+        )}
 
         {/* Teammate Module Note */}
-        <div className="mt-4 p-3 rounded-lg border border-slate-800/60 bg-slate-900/40 text-[11px] text-slate-400">
-          <div className="flex items-center gap-2 font-medium text-slate-300 mb-1">
-            <Warehouse className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-            <span>Warehouse Module</span>
+        {isAdmin && (
+          <div className="mt-4 p-3 rounded-lg border border-slate-800/60 bg-slate-900/40 text-[11px] text-slate-400">
+            <div className="flex items-center gap-2 font-medium text-slate-300 mb-1">
+              <Warehouse className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>Warehouse Module</span>
+            </div>
+            <p className="text-[10px] text-slate-500 leading-normal">
+              Warehouse structure is currently derived from inventory location records.
+            </p>
           </div>
-          <p className="text-[10px] text-slate-500 leading-normal">
-            Managed by Warehouse Teammate. Locations are consumed via integration contract.
-          </p>
-        </div>
+        )}
       </div>
 
       {/* System Status Footer */}

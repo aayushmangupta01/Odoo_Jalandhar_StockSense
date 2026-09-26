@@ -6,12 +6,14 @@ import { Badge } from '../../components/common/Badge';
 import { Card, StatCard } from '../../components/common/Card';
 import { useToast } from '../../components/common/ToastContext';
 import { ExplainStockChangeModal } from '../../components/inventory/ExplainStockChangeModal';
+import { authApi } from '../../services/authApi';
 import { Package, ArrowLeft, HelpCircle, MapPin, History, AlertTriangle, Building2, CheckCircle2 } from 'lucide-react';
 
 export function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const isAdmin = authApi.getCurrentUser()?.role === 'admin';
 
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,9 +57,9 @@ export function ProductDetailPage() {
         </Button>
 
         <div className="flex items-center gap-2">
-          <Button variant="primary" onClick={() => setIsExplainOpen(true)}>
-            <HelpCircle className="w-4 h-4 mr-1.5" /> Why did stock change?
-          </Button>
+          {isAdmin && <Button variant="primary" onClick={() => setIsExplainOpen(true)}>
+              <HelpCircle className="w-4 h-4 mr-1.5" /> Why did stock change?
+            </Button>}
         </div>
       </div>
 
@@ -159,11 +161,11 @@ export function ProductDetailPage() {
         <Card
           title="Recent Stock Movements"
           subtitle="Atomic transaction log backing current stock calculation"
-          action={
+          action={isAdmin ? (
             <Button variant="ghost" size="sm" onClick={() => setIsExplainOpen(true)}>
               Full Explanation <HelpCircle className="w-3 h-3 ml-1 text-cyan-400" />
             </Button>
-          }
+          ) : null}
           className="lg:col-span-2"
         >
           <div className="space-y-2">
@@ -205,11 +207,11 @@ export function ProductDetailPage() {
       </div>
 
       {/* Explainability Modal */}
-      <ExplainStockChangeModal
+      {isAdmin && <ExplainStockChangeModal
         productId={id}
         isOpen={isExplainOpen}
         onClose={() => setIsExplainOpen(false)}
-      />
+      />}
     </div>
   );
 }

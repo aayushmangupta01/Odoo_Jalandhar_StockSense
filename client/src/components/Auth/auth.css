@@ -263,6 +263,119 @@
   gap: 17px;
 }
 
+.auth-role-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 5px;
+  border: 1px solid #d9e2dc;
+  border-radius: 6px;
+  background: #eef3ef;
+}
+
+.auth-role-switch__option {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #65736b;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.auth-role-switch__option:hover {
+  color: #17654e;
+}
+
+.auth-role-switch__option.is-selected {
+  border-color: #cbdcd2;
+  color: #17654e;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(21 57 39 / 8%);
+}
+
+.auth-role-switch__option:focus-visible {
+  outline: 3px solid rgb(23 101 78 / 30%);
+  outline-offset: 2px;
+}
+
+.auth-demo-credentials {
+  display: grid;
+  gap: 13px;
+  margin: -8px 0 20px;
+  padding: 15px;
+  border: 1px solid #cbdcd2;
+  border-radius: 6px;
+  background: #f4f8f5;
+}
+
+.auth-demo-credentials__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #17654e;
+  font-size: 12px;
+}
+
+.auth-demo-credentials__heading span {
+  color: #75837b;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.auth-demo-credentials dl {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+}
+
+.auth-demo-credentials dl div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 11px;
+}
+
+.auth-demo-credentials dt {
+  color: #68766f;
+}
+
+.auth-demo-credentials dd {
+  margin: 0;
+  color: #25372e;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.auth-demo-credentials__action {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  color: #17654e;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-demo-credentials__action:hover {
+  text-decoration: underline;
+}
+
+.auth-demo-credentials__action:focus-visible {
+  outline: 3px solid rgb(23 101 78 / 30%);
+  outline-offset: 3px;
+}
+
 .auth-field-stack {
   display: flex;
   flex-direction: column;

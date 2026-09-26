@@ -26,16 +26,20 @@ Clone the repository and run the setup command from the project root:
 git clone https://github.com/aayushmangupta01/Odoo_Jalandhar_StockSense.git
 cd Odoo_Jalandhar_StockSense
 
-# 2. Run automated setup (Installs client & server packages + seeds database)
+# 2. Run automated setup (Installs dependencies, creates a local Admin, and seeds inventory)
 npm run setup
 
 # 3. Start application (Launches both Backend Server & Vite Frontend concurrently)
 npm run dev
 ```
 
+The setup command creates a local demo Admin on a fresh install and prints its email and randomly generated password once. Save the password; it is also stored in the ignored `server/.env.local` file. Use these credentials with the **Admin** option on the sign-in page. Staff accounts can be created from the sign-up page or managed by an Admin.
+
+For a deployed server, do not use the local demo credentials. Set a unique `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD` (at least 12 characters) in `server/.env` before starting the backend. You can create the environment file from `server/.env.example`; configured credentials are not printed.
+
 The application will automatically start:
-- 🌐 **Frontend (Vite + React)**: `http://localhost:3000/inventory/products`
-- ⚡ **Backend API (Express + SQLite)**: `http://localhost:5000`
+- 🌐 **Frontend (Vite + React)**: `http://localhost:3000`
+- ⚡ **Backend API (Express + SQLite)**: `http://localhost:5001`
 
 ---
 
@@ -47,8 +51,10 @@ If you prefer running frontend and backend in separate terminal windows:
 ```bash
 cd server
 npm install
+cp .env.example .env
+npm run setup:admin # Creates and prints a local demo Admin if credentials are blank
 npm run seed     # Populates realistic demo categories, products & transaction ledgers
-npm run dev      # Runs Express server on http://localhost:5000
+npm run dev      # Runs Express server on http://localhost:5001
 ```
 
 #### Terminal 2: Frontend Client (React + Vite + Tailwind)
@@ -95,9 +101,9 @@ npm run test     # Runs 8/8 automated test assertions
 
 ### ❓ Troubleshooting & Frequently Asked Questions
 
-#### 1. `EADDRINUSE: port 5000 or 3000 already in use`
+#### 1. `EADDRINUSE: port 5001 or 3000 already in use`
 Kill existing processes using the ports:
-- **macOS/Linux**: `lsof -i :5000` then `kill -9 <PID>`
+- **macOS/Linux**: `lsof -i :5001` then `kill -9 <PID>`
 - **Windows**: `netstat -ano | findstr :5000` then `taskkill /PID <PID> /F`
 
 #### 2. Reset Database to Clean Demo State

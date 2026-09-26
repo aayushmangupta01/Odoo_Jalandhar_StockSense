@@ -8,10 +8,12 @@ import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../components/common/ToastContext';
 import { Package, Plus, Filter, HelpCircle, ArrowRight } from 'lucide-react';
 import { ExplainStockChangeModal } from '../../components/inventory/ExplainStockChangeModal';
+import { authApi } from '../../services/authApi';
 
 export function ProductsPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const isAdmin = authApi.getCurrentUser()?.role === 'admin';
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -31,6 +33,7 @@ export function ProductsPage() {
     category_id: '',
     brand: '',
     uom: 'kg',
+    unit_cost: '',
     initial_stock: 0,
     reorder_level: 20,
     safety_stock: 5,
@@ -70,7 +73,10 @@ export function ProductsPage() {
 
     setIsSubmitting(true);
     try {
-      await inventoryApi.createProduct(formData);
+      await inventoryApi.createProduct({
+        ...formData,
+        unit_cost: formData.unit_cost === '' ? null : Number(formData.unit_cost),
+      });
       showToast(`Product ${formData.name} created successfully!`, 'success');
       setIsModalOpen(false);
       setFormData({
@@ -80,6 +86,7 @@ export function ProductsPage() {
         category_id: '',
         brand: '',
         uom: 'kg',
+        unit_cost: '',
         initial_stock: 0,
         reorder_level: 20,
         safety_stock: 5,
@@ -170,7 +177,7 @@ export function ProductsPage() {
       sortable: false,
       render: (row) => (
         <div className="flex items-center gap-2">
-          <Button
+          {isAdmin && <Button
             variant="ghost"
             size="sm"
             onClick={() => setExplainProductId(row.id)}
@@ -179,7 +186,7 @@ export function ProductsPage() {
           >
             <HelpCircle className="w-3.5 h-3.5 mr-1" />
             Why?
-          </Button>
+          </Button>}
           <Button
             variant="outline"
             size="sm"
@@ -187,6 +194,24 @@ export function ProductsPage() {
           >
             Details <ArrowRight className="w-3 h-3 ml-1" />
           </Button>
+          {isAdmin && row.status === 'ACTIVE' && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={async () => {
+                if (!window.confirm(`Archive product ${row.name} (${row.sku})?`)) return;
+                try {
+                  await inventoryApi.setProductStatus(row.id, 'ARCHIVED');
+                  await fetchProducts();
+                  showToast(`${row.name} archived.`, 'success');
+                } catch (err) {
+                  showToast(err.response?.data?.error || err.message, 'error');
+                }
+              }}
+            >
+              Archive
+            </Button>
+          )}
         </div>
       ),
     },
@@ -205,9 +230,7 @@ export function ProductsPage() {
           </p>
         </div>
 
-        <Button onClick={() => setIsModalOpen(true)} icon={Plus}>
-          Add New Product
-        </Button>
+        {isAdmin && <Button onClick={() => setIsModalOpen(true)} icon={Plus}>Add New Product</Button>}
       </div>
 
       {/* Data Table */}
@@ -248,7 +271,7 @@ export function ProductsPage() {
       />
 
       {/* Create Product Modal */}
-      <Modal
+      {isAdmin && <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Create New Product"
@@ -327,6 +350,19 @@ export function ProductsPage() {
           </div>
 
           <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">Unit Cost (optional)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.unit_cost}
+              onChange={(e) => setFormData({ ...formData, unit_cost: e.target.value })}
+              placeholder="Leave blank if unknown"
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 text-sm font-mono focus:border-cyan-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
             <label className="block text-xs font-medium text-slate-300 mb-1">Initial Opening Stock</label>
             <input
               type="number"
@@ -359,14 +395,14 @@ export function ProductsPage() {
             />
           </div>
         </form>
-      </Modal>
+      </Modal>}
 
       {/* Explainability Modal */}
-      <ExplainStockChangeModal
+      {isAdmin && <ExplainStockChangeModal
         productId={explainProductId}
         isOpen={Boolean(explainProductId)}
         onClose={() => setExplainProductId(null)}
-      />
+      />}
     </div>
   );
 }

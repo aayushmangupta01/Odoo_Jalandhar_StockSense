@@ -1,6 +1,10 @@
+require('dotenv').config({ path: ['.env.local', '.env'] });
+
 const express = require('express');
 const cors = require('cors');
+const authRoutes = require('./routes/authRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const { authenticate, auditMutations } = require('./middleware/auth');
 
 const app = express();
 
@@ -34,7 +38,8 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-app.use('/api/inventory', inventoryRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/inventory', authenticate, auditMutations, inventoryRoutes);
 
 app.get('/', (req, res) => {
   res.send('StockSense API Running...');

@@ -5,7 +5,7 @@ class IntelligenceService {
    * Detect Inventory Anomalies using Z-score and statistical variance thresholds
    */
   detectAnomalies() {
-    const products = db.prepare('SELECT id, name, sku, uom FROM products WHERE status = "ACTIVE"').all();
+    const products = db.prepare("SELECT id, name, sku, uom FROM products WHERE status = 'ACTIVE'").all();
     const anomalies = [];
 
     for (const product of products) {
@@ -72,7 +72,7 @@ class IntelligenceService {
    * Depletion Forecasting
    */
   getForecasts() {
-    const products = db.prepare('SELECT id, name, sku, uom, reorder_level FROM products WHERE status = "ACTIVE"').all();
+    const products = db.prepare("SELECT id, name, sku, uom, reorder_level FROM products WHERE status = 'ACTIVE'").all();
     const forecasts = [];
 
     for (const product of products) {
@@ -81,26 +81,18 @@ class IntelligenceService {
       `).get(product.id);
       const currentStock = stockRow && stockRow.total !== null ? stockRow.total : 0;
 
-      // Calculate daily consumption from last 14 days of DELIVERY movements
-      const deliverySumRow = db.prepare(`
-        SELECT SUM(ABS(quantity)) as total_out
-        SELECT_SUM: FROM stock_movements
+      const deliveryUsage = db.prepare(`
+        SELECT COALESCE(SUM(ABS(quantity)), 0) as total_out
+        FROM stock_movements
         WHERE product_id = ? AND operation = 'DELIVERY'
+          AND movement_timestamp >= datetime('now', '-14 days')
       `).get(product.id);
-
-      // Fallback usage calculation
-      const recentDeliveries = db.prepare(`
-        SELECT ABS(quantity) as qty FROM stock_movements
-        WHERE product_id = ? AND operation = 'DELIVERY'
-      `).all(product.id);
-
-      const totalOut = recentDeliveries.reduce((acc, curr) => acc + curr.qty, 0);
-      const avgDailyConsumption = totalOut > 0 ? Number((totalOut / 7).toFixed(2)) : 5.0; // default benchmark estimation
-
-      const coverageDays = avgDailyConsumption > 0 ? Number((currentStock / avgDailyConsumption).toFixed(1)) : 999;
-      
-      const riskDate = new Date();
-      riskDate.setDate(riskDate.getDate() + Math.min(coverageDays, 365));
+      const totalOut = Number(deliveryUsage.total_out) || 0;
+      const avgDailyConsumption = Number((totalOut / 14).toFixed(2));
+      const coverageDays = avgDailyConsumption > 0
+        ? Number((currentStock / avgDailyConsumption).toFixed(1))
+        : null;
+      const riskDate = coverageDays === null ? null : new Date(Date.now() + coverageDays * 86400000);
 
       forecasts.push({
         productId: product.id,
@@ -111,9 +103,13 @@ class IntelligenceService {
         reorderLevel: product.reorder_level,
         avgDailyConsumption,
         coverageDays,
-        shortageRiskDate: coverageDays < 90 ? riskDate.toISOString().split('T')[0] : 'No Immediate Shortage',
-        status: coverageDays <= 3 ? 'CRITICAL' : coverageDays <= 7 ? 'WARNING' : 'HEALTHY',
-        recommendation: coverageDays <= 7 ? `Reorder recommended! Current stock covers ~${coverageDays} days at present consumption velocity.` : 'Stock level is adequate for current consumption rate.',
+        shortageRiskDate: riskDate?.toISOString().split('T')[0] || null,
+        status: coverageDays === null ? 'INSUFFICIENT_DATA' : coverageDays <= 3 ? 'CRITICAL' : coverageDays <= 7 ? 'WARNING' : 'HEALTHY',
+        recommendation: coverageDays === null
+          ? 'No recent delivery history is available to estimate depletion.'
+          : coverageDays <= 7
+            ? `Reorder recommended: current stock covers approximately ${coverageDays} days at the recent usage rate.`
+            : 'Stock level is adequate based on the recent usage rate.',
       });
     }
 
@@ -149,7 +145,7 @@ class IntelligenceService {
 
     // Generate Smart Transfer Recommendations
     const recommendations = [];
-    const products = db.prepare('SELECT id, name, sku, uom FROM products WHERE status = "ACTIVE"').all();
+    const products = db.prepare("SELECT id, name, sku, uom FROM products WHERE status = 'ACTIVE'").all();
 
     for (const prod of products) {
       const locStocks = db.prepare(`

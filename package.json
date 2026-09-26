@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "StockSense — Intelligent Inventory Management System",
   "scripts": {
-    "setup": "npm install --prefix server && npm install --prefix client && npm run seed --prefix server",
+    "setup": "npm install --prefix server && npm install --prefix client && npm run setup:admin --prefix server && npm run seed --prefix server",
     "dev:server": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix client",
     "web": "npm run dev:client",
