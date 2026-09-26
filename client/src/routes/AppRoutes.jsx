@@ -21,11 +21,23 @@ import ForecastPage from "../pages/inventory/intelligence/ForecastPage";
 import LocationIntelligencePage from "../pages/inventory/intelligence/LocationIntelligencePage";
 import SmartRecommendationsPage from "../pages/inventory/intelligence/SmartRecommendationsPage";
 import StockDetectivePage from "../pages/inventory/StockDetectivePage";
+import Login from "../pages/Login/Login";
+import Signup from "../pages/Signup/Signup";
+import ForgotPassword from "../pages/Login/ForgotPassword";
+import OTPVerification from "../pages/Login/OTPVerification";
+import ResetPassword from "../pages/Login/ResetPassword";
 
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Authentication routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-otp" element={<OTPVerification />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+
         {/* Main Dashboard route (Owned by Teammate) */}
         <Route path="/" element={<Dashboard />} />
 
